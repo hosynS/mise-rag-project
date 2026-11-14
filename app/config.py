@@ -7,9 +7,15 @@ from urllib.parse import urlparse, parse_qs
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    try:
+        import streamlit as st
+        DATABASE_URL = st.secrets.get("DATABASE_URL")
+    except Exception:
+        pass
 
 if not DATABASE_URL:
-    raise ValueError("Missing DATABASE_URL environment variable. Check your .env file.")
+    raise ValueError("Missing DATABASE_URL environment variable. Check your .env file or Streamlit Secrets.")
 
 _parsed = urlparse(DATABASE_URL)
 _query = parse_qs(_parsed.query)

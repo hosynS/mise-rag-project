@@ -9,7 +9,18 @@ import time
 from google.genai.errors import ServerError
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+
+def _get_api_key():
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        try:
+            import streamlit as st
+            key = st.secrets.get("GEMINI_API_KEY")
+        except Exception:
+            pass
+    return key
+
+client = genai.Client(api_key=_get_api_key())
 
 
 EMBED_MODEL = "gemini-embedding-001"
@@ -146,7 +157,7 @@ def generate_answer_with_metrics(question: str) -> dict:
         except Exception as e:
             print(f"Unexpected error: {e}")
             return {
-                "answer": "Ett oväntat fel uppstod. Försök igen om en liten stund.",
+                "answer": f"Ett fel uppstod: {e}",
                 "latency_ms": round((time.time() - start_time) * 1000, 2),
                 "cost_usd": 0.0,
             }
@@ -179,7 +190,7 @@ def generate_answer(question, chunks=None, retries=3):
             )
         except Exception as e:
             print(f"Unexpected error: {e}")
-            return "Ett oväntat fel uppstod. Försök igen om en liten stund."
+            return f"Ett fel uppstod: {e}"
 
 
 def ask(question: str):
