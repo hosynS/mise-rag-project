@@ -70,7 +70,7 @@ User question
 build_prompt (context + 6 deterministic business rules)
         |
         v
-Gemini 3 Flash (generate_content, up to 3 retries on ServerError)
+Gemini 3.5 Flash (generate_content, up to 3 retries on ServerError)
         |
         v
 Answer with source citations + latency/cost metrics --> Streamlit UI
@@ -143,7 +143,7 @@ See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the full pipeline
 1. Clone the repo:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/hosynS/mise-rag-project.git
 cd Rag-for-Mise
 ```
 
@@ -164,12 +164,24 @@ DATABASE_URL=postgresql://user:password@localhost:5432/mise_rag
 
 ## Configuration
 
-All sensitive values (API keys, database connection) are loaded via the `.env` file using `python-dotenv`. Make sure `.env` is never committed to version control.
+All sensitive values (API keys, database connection) are loaded via the `.env` file using `python-dotenv` locally, with automatic fallback to `st.secrets` when deployed on Streamlit Cloud. Make sure `.env` is never committed to version control.
 
 | Variable         | Description                                                |
 | ---------------- | ---------------------------------------------------------- |
 | `GEMINI_API_KEY` | API key for Google Gemini (embedding + generation)         |
 | `DATABASE_URL`   | Connection string to the PostgreSQL database with pgvector |
+
+### Streamlit Community Cloud Deployment
+
+When deploying to Streamlit Cloud:
+- **Repository:** `https://github.com/hosynS/mise-rag-project`
+- **Branch:** `main`
+- **Main file path:** `app/frontend.py`
+- In **Advanced settings ➔ Secrets**, provide your environment variables in TOML format:
+  ```toml
+  GEMINI_API_KEY = "your_gemini_api_key"
+  DATABASE_URL = "postgresql://user:password@host:port/dbname?sslmode=require"
+  ```
 
 ## Usage
 
@@ -276,7 +288,7 @@ The retrieved chunks are combined with the user's question and six business rule
 
 ### 4. Generation
 
-The final prompt is sent to Gemini 3 Flash, which generates an answer with source citations, with up to three retries on server overload.
+The final prompt is sent to Gemini 3.5 Flash, which generates an answer with source citations, with up to three retries on server overload.
 
 ### 5. Form Matching
 
@@ -295,6 +307,10 @@ The final prompt is sent to Gemini 3 Flash, which generates an answer with sourc
 ### 3. Business vs. Private Fee Leakage (Wrong Fee Served to Wrong Customer)
 - **Issue:** Chunk embeddings alone were insufficient to separate private household tariffs from commercial tariffs when the vector text was semantically similar. The model would occasionally serve a business fee to a private question.
 - **Fix:** Enhanced the PDF table ingestion in `ingest_mise.py` with `pdfplumber` to prepend explicit `[Rubrik: ...]` section headers (extracted from numbered headings) to each table row chunk. Added deterministic prompt business rules instructing the model to trust `[Rubrik]` tags over raw similarity scores when assigning fees to household vs. business categories.
+
+### 4. Cloud Deployment & Model API Compatibility
+- **Issue:** Deploying to Streamlit Cloud initially failed with missing environment variables because `.env` is omitted from version control and Streamlit isolates secrets in `st.secrets`. Furthermore, older preview model tags (`gemini-3-flash-preview`) failed with `404 NOT_FOUND` on Google's GA `v1` endpoint.
+- **Fix:** Added automatic fallback to `st.secrets` across `app/config.py` and `app/main.py` so the application runs seamlessly both locally and on Streamlit Cloud without code adjustments. Updated the LLM to Google's production `gemini-3.5-flash` model and improved error reporting to surface API diagnostics directly in the interface.
 
 ## Known Limitations
 
