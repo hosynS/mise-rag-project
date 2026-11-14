@@ -24,7 +24,7 @@ client = genai.Client(api_key=_get_api_key())
 
 
 EMBED_MODEL = "gemini-embedding-001"
-GEN_MODEL = "gemini-3-flash-preview"
+GEN_MODEL = "gemini-3.5-flash"
 TOP_K = 12
 
 
